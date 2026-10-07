@@ -1,0 +1,54 @@
+name: Deploy CDO Staff Guide
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "guide.zip"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Prepare guide
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f guide.zip || { echo "guide.zip is missing"; exit 1; }
+          rm -rf _site extracted
+          mkdir -p _site extracted
+          unzip -q guide.zip -d extracted
+          test -f extracted/cdo_interactive_guide_v3/index.html || { echo "Unexpected archive structure"; exit 1; }
+          cp -a extracted/cdo_interactive_guide_v3/. _site/
+          rm -f _site/serve.py
+          touch _site/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

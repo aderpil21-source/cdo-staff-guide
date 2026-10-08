@@ -38,6 +38,21 @@ jobs:
           unzip -q guide.zip -d extracted
           test -f extracted/cdo_interactive_guide_v3/index.html || { echo "Unexpected archive structure"; exit 1; }
           cp -a extracted/cdo_interactive_guide_v3/. _site/
+          # Keep the published staff guide's contact email current.
+          python3 - <<'PY'
+          from pathlib import Path
+          old_email = b'oxcidx@rmail.com'
+          new_email = b'oxcidx@gmail.com'
+          extensions = {'.html', '.htm', '.js', '.json', '.css', '.svg', '.txt', '.md', '.xml'}
+          for file in Path('_site').rglob('*'):
+              if not file.is_file() or file.suffix.lower() not in extensions:
+                  continue
+              content = file.read_bytes()
+              count = content.count(old_email)
+              if count:
+                  file.write_bytes(content.replace(old_email, new_email))
+                  print(f'Updated {count} email reference(s) in {file}')
+          PY
           rm -f _site/serve.py
           touch _site/.nojekyll
 
